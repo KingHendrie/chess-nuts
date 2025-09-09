@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>Chess-Nuts</title>
+		<%- include('partials/head') %>
+		<%- include('partials/scripts') %>
+	</head>
+	<body>
+		<div class="layout-container">
+			<%- include('partials/navbar') %>
+			<main class="main-content">
+				<%- body %>
+
+				<%- include('partials/footer') %>
+			</main>
+		</div>
+		<div id="toast-container"></div>
+		<div id="modal-alert"></div>
+	</body>
+</html>

@@ -1,0 +1,17 @@
+<div class="error-page">
+	<h1>500 - Server Error</h1>
+	<p>Sorry, something went wrong.</p>
+
+	<% if (typeof error !== 'undefined' && error) { %>
+		<h2>Error details:</h2>
+		<pre style="color: #c00; background: #fee; padding: 1em; border-radius: 5px;">
+			<%= error.message || error.toString() %>
+		</pre>
+		<% if (error.stack) { %>
+            <details>
+				<summary>Stack Trace</summary>
+				<pre><%= error.stack %></pre>
+            </details>
+        <% } %>
+	<% } %>
+</div>

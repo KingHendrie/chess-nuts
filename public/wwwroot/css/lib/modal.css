@@ -1,0 +1,92 @@
+.modal {
+    position: fixed;
+    z-index: 2000;
+    left: 0; top: 0; width: 100vw; height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-backdrop {
+    position: absolute;
+    left: 0; top: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.35);
+    z-index: 1;
+}
+
+.modal-content {
+    position: relative;
+    z-index: 2;
+    background: var(--color-tertiary, #FFF);
+    border-radius: 10px;
+    min-width: 340px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: 0 8px 36px rgba(0,0,0,0.20);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    animation: modal-in 0.22s cubic-bezier(.39,.95,.56,1.01);
+}
+
+@keyframes modal-in {
+	from { transform: scale(0.98) translateY(30px); opacity: 0; }
+	to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.modal-close {
+	position: absolute;
+	top: 10px; right: 15px;
+	background: none;
+	border: none;
+	color: var(--color-accent, #e55);
+	font-size: 2rem;
+	cursor: pointer;
+	transition: color 0.18s;
+	z-index: 3;
+}
+
+.modal-close:hover { color: var(--color-secondary, #222); }
+
+.modal-content > h3,
+.modal-content > h2,
+.modal-content > h1 {
+	margin: 0 0 20px 0;
+	padding: 32px 24px 0 24px;
+}
+
+.modal .input-form {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	padding: 0 24px;
+	display: grid;
+	gap: 1.25rem 2rem;
+	grid-template-columns: 1fr;
+}
+
+.modal .input-form::-webkit-scrollbar { width: 8px; }
+.modal .input-form::-webkit-scrollbar-thumb { background: #ddd; border-radius: 6px; }
+.modal .input-form { scrollbar-color: #bbb #eee; scrollbar-width: thin; }
+
+@media (min-width: 600px) {
+	.modal .input-form.two-cols { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 1000px) {
+	.modal .input-form.three-cols { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+.modal .input-form > .d-flex,
+.modal .input-form > .alert,
+.modal .input-form > button,
+.modal .input-form > .btn,
+.modal .input-form > div[id*="error"],
+.modal .input-form > div[id*="message"] {
+	grid-column: 1 / -1;
+}
+
+.modal-content > form .d-flex,
+.modal-content > form [type="submit"],
+.modal-content > form [type="button"] {
+	margin-bottom: 20px;
+}

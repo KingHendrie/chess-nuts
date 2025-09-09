@@ -1,0 +1,151 @@
+@import url('https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap');
+
+/*=========================
+    Top Navbar
+=========================*/
+.top-navbar {
+    width: 100vw;
+    min-width: 100%;
+    height: 68px;
+    background: var(--color-primary);
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    padding: 0 32px;
+    font-family: 'Roboto', sans-serif;
+}
+
+.navbar-logo {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    margin-right: 24px;
+}
+
+.logo-image {
+    height: 52px;
+    width: auto;
+    display: block;
+}
+
+.navbar-links {
+    flex: 1 1 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.navbar-links ul {
+    display: flex;
+    flex-direction: row;
+    gap: 36px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.navbar-links li {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.navbar-links a {
+    color: var(--color-text);
+    text-decoration: none;
+    padding: 10px 18px;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 1.08em;
+    transition: background 0.2s, color 0.2s;
+    display: block;
+}
+
+.navbar-links a:hover,
+.navbar-links a.active {
+    background: var(--color-accent);
+    color: var(--color-tertiary);
+}
+
+.navbar-profile {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    margin-left: 24px;
+    height: 100%;
+}
+
+.profile-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--color-secondary);
+    object-fit: cover;
+    transition: background 0.2s;
+}
+
+.profile-link:hover .profile-icon,
+.profile-link.active .profile-icon {
+    background: var(--color-accent);
+}
+
+/* Responsive Navbar */
+@media (max-width: 900px) {
+    .top-navbar {
+        padding: 0 12px;
+    }
+    .navbar-links ul {
+        gap: 18px;
+    }
+    .logo-image {
+        height: 40px;
+    }
+    .profile-icon {
+        width: 40px;
+        height: 40px;
+    }
+}
+
+@media (max-width: 600px) {
+    .top-navbar {
+        flex-direction: column;
+        height: auto;
+        padding: 0 2vw;
+    }
+    .navbar-links {
+        order: 2;
+        width: 100%;
+        justify-content: center;
+        padding: 6px 0;
+    }
+    .navbar-links ul {
+        gap: 6vw;
+    }
+    .navbar-logo, .navbar-profile {
+        order: 1;
+        width: 100%;
+        justify-content: space-between;
+        margin: 0;
+        margin-bottom: 6px;
+    }
+    .navbar-logo {
+        justify-content: flex-start;
+    }
+    .navbar-profile {
+        justify-content: flex-end;
+    }
+}

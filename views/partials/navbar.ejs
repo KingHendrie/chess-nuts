@@ -1,0 +1,33 @@
+<nav class="top-navbar">
+    <div class="navbar-logo">
+        <a href="/" class="logo">
+            <img src="/wwwroot/img/logo_img_no_bg.png" alt="Logo" class="logo-image">
+        </a>
+    </div>
+    <div class="navbar-links">
+        <ul>
+            <li>
+                <a href="/" class="<%= activePath === '/' ? 'active' : '' %>">Home</a>
+            </li>
+            <li>
+                <a href="/features" class="<%= activePath.startsWith('/features') ? 'active' : '' %>">Features</a>
+            </li>
+            <li>
+                <a href="/about" class="<%= activePath.startsWith('/about') ? 'active' : '' %>">About</a>
+            </li>
+            <li>
+                <a href="/contact" class="<%= activePath.startsWith('/contact') ? 'active' : '' %>">Contact</a>
+            </li>
+            <% if (isAdmin) { %>
+                <li>
+                    <a href="/admin" class="<%= activePath.startsWith('/admin') ? 'active' : '' %>">Admin</a>
+                </li>
+            <% } %>
+        </ul>
+    </div>
+    <div class="navbar-profile">
+        <a href="/profile" class="profile-link<%= activePath.startsWith('/profile') ? ' active' : '' %>">
+            <img src="/wwwroot/img/Profile.png" alt="Profile" class="profile-icon">
+        </a>
+    </div>
+</nav>
