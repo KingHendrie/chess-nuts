@@ -1,3 +1,192 @@
+/* Show/hide desktop/mobile elements */
+.desktop-only { display: flex !important; }
+.mobile-only { display: none !important; }
+
+@media (max-width: 900px) {
+  .desktop-only { display: none !important; }
+  .mobile-only { display: flex !important; }
+}
+
+/* Burger menu right align in header row */
+.navbar-header-row {
+    width: 100vw;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    min-height: 68px;
+}
+.navbar-header-row .navbar-logo {
+    margin: 0;
+}
+.navbar-header-row .navbar-burger {
+    margin-left: auto;
+}
+
+/* Mobile navbar profile at bottom */
+.mobile-navbar-profile {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    position: absolute;
+    bottom: 32px;
+    left: 0;
+}
+.mobile-navbar-profile .profile-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+/*=========================
+    Navbar Header Row
+=========================*/
+/* Navbar header row: flex row for mobile, revert to default for desktop */
+.navbar-header-row {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .navbar-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100vw;
+        gap: 12px;
+        padding: 0 8px;
+        min-height: 68px;
+    }
+    .navbar-logo, .navbar-profile {
+        margin: 0;
+    }
+}
+
+@media (min-width: 901px) {
+    .top-navbar {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        height: 68px;
+        padding: 0 32px;
+    }
+    .navbar-logo {
+        margin-right: 24px;
+    }
+    .desktop-navbar {
+        flex: 1 1 auto;
+        display: flex !important;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+    }
+    .navbar-profile {
+        margin-left: 24px;
+    }
+    .navbar-header-row {
+        display: none;
+    }
+}
+
+/*=========================
+    Mobile Nav Close Button
+=========================*/
+.mobile-navbar-close {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    background: none;
+    border: none;
+    font-size: 3rem;
+    color: var(--color-text);
+    cursor: pointer;
+    z-index: 10001;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.2s;
+}
+.mobile-navbar-close:hover {
+    color: var(--color-accent);
+}
+/*=========================
+    Mobile Fullscreen Nav
+=========================*/
+.mobile-navbar {
+    display: none;
+}
+.mobile-navbar.active {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: var(--color-primary);
+    z-index: 9999;
+    transition: opacity 0.3s;
+}
+.mobile-navbar ul {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.mobile-navbar a {
+    color: var(--color-text);
+    font-size: 2em;
+    font-weight: 700;
+    text-decoration: none;
+    padding: 12px 32px;
+    border-radius: 8px;
+    transition: background 0.2s, color 0.2s;
+}
+.mobile-navbar a.active,
+.mobile-navbar a:hover {
+    background: var(--color-accent);
+    color: var(--color-tertiary);
+}
+
+/*=========================
+    Burger Menu
+=========================*/
+.navbar-burger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 44px;
+    height: 44px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    z-index: 110;
+    margin-left: 8px;
+}
+.navbar-burger span {
+    display: block;
+    width: 28px;
+    height: 3px;
+    margin: 4px 0;
+    background: var(--color-text);
+    border-radius: 2px;
+    transition: all 0.3s;
+}
+.navbar-burger.active span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+.navbar-burger.active span:nth-child(2) {
+    opacity: 0;
+}
+.navbar-burger.active span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
 @import url('https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap');
 
 /*=========================
@@ -118,6 +307,15 @@
         width: 40px;
         height: 40px;
     }
+    .navbar-burger {
+        display: flex;
+    }
+    .desktop-navbar {
+        display: flex;
+    }
+    .mobile-navbar {
+        display: none;
+    }
 }
 
 @media (max-width: 600px) {
@@ -126,14 +324,14 @@
         height: auto;
         padding: 0 2vw;
     }
-    .navbar-links {
-        order: 2;
-        width: 100%;
-        justify-content: center;
-        padding: 6px 0;
+    .desktop-navbar {
+        display: none !important;
     }
-    .navbar-links ul {
-        gap: 6vw;
+    .mobile-navbar {
+        display: none;
+    }
+    .mobile-navbar.active {
+        display: flex;
     }
     .navbar-logo, .navbar-profile {
         order: 1;

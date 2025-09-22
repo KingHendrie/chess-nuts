@@ -1,0 +1,31 @@
+/*=========================
+    Alerts & Loading
+=========================*/
+.alert {
+    border-radius: 4px;
+    padding: 8px 16px;
+    margin-top: 16px;
+    font-weight: 500;
+    display: block;
+    text-align: center;
+}
+
+.alert-danger {
+    color: #fff;
+    background: var(--color-accent);
+}
+
+.spinner-border {
+    display: inline-block;
+    width: 1.6em;
+    height: 1.6em;
+    vertical-align: text-bottom;
+    border: 0.25em solid var(--color-accent);
+    border-right: 0.25em solid transparent;
+    border-radius: 50%;
+    animation: spinner-border 0.75s linear infinite;
+}
+
+@keyframes spinner-border {
+    to { transform: rotate(360deg); }
+}

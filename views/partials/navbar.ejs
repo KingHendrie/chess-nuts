@@ -1,10 +1,11 @@
 <nav class="top-navbar">
-    <div class="navbar-logo">
+    <!-- Desktop: logo, links, profile -->
+    <div class="navbar-logo desktop-only">
         <a href="/" class="logo">
             <img src="/wwwroot/img/logo_img_no_bg.png" alt="Logo" class="logo-image">
         </a>
     </div>
-    <div class="navbar-links">
+    <div class="navbar-links desktop-navbar desktop-only" id="navbar-links">
         <ul>
             <li>
                 <a href="/" class="<%= activePath === '/' ? 'active' : '' %>">Home</a>
@@ -25,9 +26,51 @@
             <% } %>
         </ul>
     </div>
-    <div class="navbar-profile">
+    <div class="navbar-profile desktop-only">
         <a href="/profile" class="profile-link<%= activePath.startsWith('/profile') ? ' active' : '' %>">
             <img src="/wwwroot/img/Profile.png" alt="Profile" class="profile-icon">
         </a>
     </div>
+
+    <!-- Mobile: header row with logo left, burger right -->
+    <div class="navbar-header-row mobile-only">
+        <div class="navbar-logo">
+            <a href="/" class="logo">
+                <img src="/wwwroot/img/logo_img_no_bg.png" alt="Logo" class="logo-image">
+            </a>
+        </div>
+        <button class="navbar-burger" id="navbar-burger" aria-label="Toggle navigation" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </div>
+    <div class="mobile-navbar" id="mobile-navbar">
+        <button class="mobile-navbar-close" id="mobile-navbar-close" aria-label="Close navigation">&times;</button>
+        <ul>
+            <li>
+                <a href="/" class="<%= activePath === '/' ? 'active' : '' %>">Home</a>
+            </li>
+            <li>
+                <a href="/features" class="<%= activePath.startsWith('/features') ? 'active' : '' %>">Features</a>
+            </li>
+            <li>
+                <a href="/about" class="<%= activePath.startsWith('/about') ? 'active' : '' %>">About</a>
+            </li>
+            <li>
+                <a href="/contact" class="<%= activePath.startsWith('/contact') ? 'active' : '' %>">Contact</a>
+            </li>
+            <% if (isAdmin) { %>
+                <li>
+                    <a href="/admin" class="<%= activePath.startsWith('/admin') ? 'active' : '' %>">Admin</a>
+                </li>
+            <% } %>
+        </ul>
+        <div class="mobile-navbar-profile">
+            <a href="/profile" class="profile-link<%= activePath.startsWith('/profile') ? ' active' : '' %>">
+                <img src="/wwwroot/img/Profile.png" alt="Profile" class="profile-icon">
+            </a>
+        </div>
+    </div>
+    <!-- Profile moved into header row above -->
 </nav>

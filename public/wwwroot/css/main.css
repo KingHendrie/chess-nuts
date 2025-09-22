@@ -1,4 +1,38 @@
 /*=========================
+    Banner Styling
+=========================*/
+.banner-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.banner-img {
+    width: 100%;
+    max-width: 900px;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    object-fit: cover;
+    transition: max-width 0.3s, width 0.3s;
+}
+
+@media (max-width: 900px) {
+    .banner-img {
+        max-width: 90vw;
+    }
+}
+
+@media (max-width: 600px) {
+    .banner-img {
+        max-width: 98vw;
+        border-radius: 6px;
+    }
+}
+
+/*=========================
     Main Content
 =========================*/
 .main-content {
