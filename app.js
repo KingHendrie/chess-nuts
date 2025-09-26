@@ -62,7 +62,7 @@ async function renderWithLayout(res, page, options = {}) {
     options.isLoggedIn = !!user;
 
     // Protect specific paths (e.g., /profile and /admin)
-    const protectedPaths = ['/admin'];
+    const protectedPaths = ['/profile', '/admin'];
     const currentPath = res.req.path;
 
     if (protectedPaths.some(p => currentPath.startsWith(p)) && !user) {

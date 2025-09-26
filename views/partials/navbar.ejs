@@ -26,10 +26,16 @@
             <% } %>
         </ul>
     </div>
-    <div class="navbar-profile desktop-only">
-        <a href="/profile" class="profile-link<%= activePath.startsWith('/profile') ? ' active' : '' %>">
-            <img src="/wwwroot/img/Profile.png" alt="Profile" class="profile-icon">
-        </a>
+    <div class="navbar-auth desktop-only">
+        <% if (!isLoggedIn) { %>
+            <a href="/login" class="auth-link">Login</a>
+        <% } else { %>
+            <div class="navbar-profile">
+                <a href="/profile" class="profile-link <%= activePath.startsWith('/profile') ? 'active' : '' %>">
+                    <img src="/wwwroot/img/Profile.png" alt="Profile" class="profile-icon">
+                </a>
+            </div>
+        <% } %>
     </div>
 
     <!-- Mobile: header row with logo left, burger right -->
@@ -66,11 +72,18 @@
                 </li>
             <% } %>
         </ul>
-        <div class="mobile-navbar-profile">
-            <a href="/profile" class="profile-link<%= activePath.startsWith('/profile') ? ' active' : '' %>">
-                <img src="/wwwroot/img/Profile.png" alt="Profile" class="profile-icon">
-            </a>
+        <div class="navbar-auth mobile-only">
+            <% if (isLoggedIn) { %>
+                <div class="mobile-navbar-auth">
+                    <a href="/login" class="auth-link">Login</a>
+                </div>
+            <% } else { %>
+                <div class="navbar-profile">
+                    <a href="/profile" class="profile-link <%= activePath.startsWith('/profile') ? 'active' : '' %>">
+                        <img src="/wwwroot/img/Profile.png" alt="Profile" class="profile-icon">
+                    </a>
+                </div>
+            <% } %>
         </div>
     </div>
-    <!-- Profile moved into header row above -->
 </nav>
