@@ -93,6 +93,39 @@ html, body {
 }
 
 /*=========================
+    Welcome
+=========================*/
+.welcome-section {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.features ul {
+    display: flex;
+    flex-wrap: wrap;
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    justify-content: center;
+}
+
+.features ul li {
+    flex: 0 0 33.3333%;
+    max-width: 33.3333%;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.feature-icon svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 12px;
+}
+
+/*=========================
     Book
 =========================*/
 .book-details-container {
