@@ -94,7 +94,7 @@ async function renderWithLayout(res, page, options = {}) {
 
     let pagePath = path.join(__dirname, 'views/pages', `${page}.ejs`);
     if (!fs.existsSync(pagePath)) {
-        const indexFallbackPath = path.join(__dirname, 'views/pages', page, 'index.ejs');
+        const indexFallbackPath = path.join(__dirname, 'views/pages', page, 'home.ejs');
         if (fs.existsSync(indexFallbackPath)) {
             pagePath = indexFallbackPath;
         } else {
@@ -140,7 +140,7 @@ async function renderWithLayout(res, page, options = {}) {
 }
 
 // Catch-all route for generic rendering based on URL path
-app.get('/', (req, res, next) => {
+app.get(/.*/, (req, res, next) => {
     try {
         const segments = req.path.split('/').filter(Boolean);
         const page = segments.join('/') || 'home';
