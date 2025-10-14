@@ -3,8 +3,10 @@ function showToast(message, type = 'info') {
     if (!container) return;
 
     const toast = document.createElement('div');
-    toast.className = `toat ${type}`;
+    toast.className = `toast ${type}`;
     toast.textContent = message;
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
 
     container.appendChild(toast);
 
