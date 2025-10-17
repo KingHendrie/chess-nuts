@@ -1,0 +1,76 @@
+<div class="container profile-container">
+	<h2>Your Profile</h2>
+
+	<!-- General Info Section -->
+	<section class="mb-3">
+		<h3>General Information</h3>
+		<form id="profileInfoForm" class="input-form">
+			<label for="profileFirstName">First Name</label>
+			<input id="profileFirstName" name="firstName" type="text" required>
+
+			<label for="profileLastName">Last Name</label>
+			<input id="profileLastName" name="lastName" type="text" required>
+
+			<label for="profileEmail">Email</label>
+			<input id="profileEmail" name="email" type="email" disabled>
+
+			<button type="submit" class="btn">Update Info</button>
+			<div id="profile-info-message" class="alert mt-3 d-none"></div>
+		</form>
+	</section>
+
+	<!-- Security Section -->
+	<section class="mb-3">
+		<h3>Security</h3>
+		<form id="profilePasswordForm" class="input-form">
+			<label for="newPassword">New Password</label>
+			<input id="newPassword" name="newPassword" type="password" required>
+
+			<label for="confirmNewPassword">Confirm New Password</label>
+			<input id="confirmNewPassword" name="confirmNewPassword" type="password" required>
+
+			<button type="submit" class="btn">Change Password</button>
+			<div id="profile-password-message" class="alert mt-3 d-none"></div>
+		</form>
+	</section>
+
+	<!-- 2FA Code Modal for Password Change -->
+	<div id="password2FAModal" class="modal d-none">
+		<div class="modal-backdrop"></div>
+		<div class="modal-content">
+			<button class="modal-close" id="closePassword2FAModal" aria-label="Close">&times;</button>
+			<h3>Password Change Verification</h3>
+			<form id="password2FAForm" class="input-form">
+				<label for="password2FACode">Enter the code sent to your email:</label>
+				<input type="text" id="password2FACode" name="password2FACode" required placeholder="xxx-xxx-xxx" autocomplete="one-time-code" maxlength="11">
+				<div class="d-flex justify-content-between mt-3">
+					<button type="button" class="btn" id="cancelPassword2FA">Cancel</button>
+					<button type="submit" class="btn">Change Password</button>
+				</div>
+				<div id="password2FA-error" class="alert alert-danger mt-3 d-none"></div>
+				<div id="password2FALoading" class="mt-3 d-flex align-items-center justify-content-center d-none">
+					<div class="spinner-border"></div>
+					<span class="ms-2">Processing...</span>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<!-- 2FA Section -->
+	<section>
+		<h3>Two-Factor Authentication (2FA)</h3>
+		<div id="2fa-section" class="mb-3">
+			<div id="2fa-status">
+			<!-- Populated by JS -->
+			<span>Loading 2FA status...</span>
+			</div>
+			<div id="profile-2fa-message" class="alert mt-3 d-none"></div>
+		</div>
+	</section>
+
+	<hr class="mb-3">
+
+	<a type="button" class="btn" onclick="signOut();">Sign Out</a>
+</div>
+
+<script src="/wwwroot/js/profile.js"></script>
