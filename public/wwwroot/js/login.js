@@ -4,8 +4,9 @@ function showLoading(show = true) {
 }
 
 function show2FAModal(email) {
-	showLoading(true);
-	Modal.setupFormModal({
+    showLoading(true);
+    if (!window.Modal) return; // modal not available
+    Modal.setupFormModal({
 		modalId: 'twoFAModal',
 		title: 'Two-Factor Authentication',
 		submitText: 'Verify',
@@ -23,7 +24,12 @@ function hide2FAModal() {
 	Modal.close('twoFAModal');
 }
 
-Modal.bind('twoFAModal', { closeOnBackdrop: true, closeOnEscape: true });
+// Bind modal handlers if Modal is available. If not, attach when DOMContentLoaded and Modal appears.
+function ensureModalBindings() {
+	if (window.Modal && typeof Modal.bind === 'function') {
+		Modal.bind('twoFAModal', { closeOnBackdrop: true, closeOnEscape: true });
+	}
+}
 
 async function loginUser() {
 	showLoading(true);
@@ -82,3 +88,16 @@ async function singOut() {
 		showToast(result.error, 'error');
 	}
 }
+
+// Attach login form handler and modal bindings once DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+	ensureModalBindings();
+
+	const loginForm = document.getElementById('loginForm');
+	if (loginForm) {
+		loginForm.addEventListener('submit', function (e) {
+			e.preventDefault();
+			loginUser();
+		});
+	}
+});
