@@ -1,4 +1,5 @@
 require('dotenv').config();
+console.log('dotenv configuration loaded');
 
 const express = require('express');
 const path = require('path');
@@ -8,8 +9,21 @@ const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const helmet = require('helmet');
 const compression = require('compression');
-
 const logger = require('./utils/logger');
+const { registry } = require('./utils/metrics');
+const { initializeService } = require('./utils/services/gameSessionService');
+
+// Optional security and observability integrations (loaded only when configured)
+let Sentry;
+try {
+    if (process.env.SENTRY_DSN) {
+        Sentry = require('@sentry/node');
+        Sentry.init({ dsn: process.env.SENTRY_DSN });
+        logger.info('Sentry initialized');
+    }
+} catch (e) {
+    logger.warn('Sentry not installed or failed to initialize: ' + e.message);
+}
 const db = require('./utils/db');
 const apiRoutes = require('./utils/api');
 
@@ -19,20 +33,110 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static('public'));
 app.use(cookieParser(process.env.APP_SECRET));
-app.use(session({
-    secret: process.env.APP_SECRET,
+
+// Session configuration: optionally use Redis store if REDIS_URL is provided
+const sessionConfig = {
+    secret: process.env.APP_SECRET || 'dev-secret',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false } // Set secure: true if using HTTPS
+    cookie: { secure: process.env.COOKIE_SECURE === 'true' }
+};
+
+if (process.env.REDIS_URL) {
+    try {
+        const Redis = require('ioredis');
+        const connectRedis = require('connect-redis');
+        const RedisStore = connectRedis(session);
+        const redisClient = new Redis(process.env.REDIS_URL);
+        sessionConfig.store = new RedisStore({ client: redisClient });
+        logger.info('Using Redis session store');
+    } catch (e) {
+        logger.warn('Redis session store not configured: ' + e.message);
+    }
+}
+
+app.use(session(sessionConfig));
+// Configure Helmet with a permissive Content-Security-Policy for CDNs we use
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://cdn.socket.io', "'unsafe-inline'"],
+            imgSrc: ["'self'", 'data:', 'https://cdn.jsdelivr.net'],
+            connectSrc: ["'self'", 'https://cdn.socket.io', `ws://localhost:${process.env.PORT || 3000}`, `http://localhost:${process.env.PORT || 3000}`],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            fontSrc: ["'self'", 'https://cdn.jsdelivr.net']
+        }
+    }
 }));
-app.use(helmet());
 app.use(compression());
 app.use('/api', apiRoutes);
+
+// Rate limiting for sensitive endpoints
+try {
+    const rateLimit = require('express-rate-limit');
+    const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
+    app.use('/api/user/login', authLimiter);
+    app.use('/api/user/register', authLimiter);
+} catch (e) {
+    logger.warn('express-rate-limit not installed or failed to initialize');
+}
+
+// Optional CSRF protection for non-API forms
+if (process.env.ENABLE_CSRF === 'true') {
+    try {
+        const csurf = require('csurf');
+        app.use(csurf({ cookie: true }));
+    } catch (e) {
+        logger.warn('csurf not installed or failed to initialize');
+    }
+}
+
+// Optional Prometheus metrics endpoint
+if (process.env.ENABLE_METRICS === 'true') {
+    try {
+        const client = require('prom-client');
+        client.collectDefaultMetrics();
+        app.get('/metrics', async (req, res) => {
+            res.set('Content-Type', client.register.contentType);
+            res.end(await client.register.metrics());
+        });
+    } catch (e) {
+        logger.warn('prom-client not installed or failed to initialize');
+    }
+}
+
+// If Sentry is initialized, add request and error handlers around API routes
+if (Sentry) {
+    try {
+        app.use(Sentry.Handlers.requestHandler());
+        app.use(Sentry.Handlers.errorHandler());
+    } catch (e) {
+        logger.warn('Failed to attach Sentry handlers: ' + e.message);
+    }
+}
 
 // Middleware: Make activePath available to all views for nav highlighting
 app.use((req, res, next) => {
     res.locals.activePath = req.path;
     next();
+});
+
+// Health and readiness endpoints
+app.get('/health', (req, res) => res.status(200).send('OK'));
+app.get('/ready', async (req, res) => {
+    try {
+        await db.checkConnection();
+        res.status(200).send('READY');
+    } catch (err) {
+        res.status(500).send('NOT READY');
+    }
+});
+
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', registry.contentType);
+    res.end(await registry.metrics());
 });
 
 // Helper: Capitalize for page titles
@@ -62,11 +166,34 @@ async function renderWithLayout(res, page, options = {}) {
     options.isLoggedIn = !!user;
 
     // Protect specific paths (e.g., /profile and /admin)
-    const protectedPaths = ['/profile', '/admin', '/play'];
+    const protectedPaths = ['/profile', '/admin', '/play', '/game'];
     const currentPath = res.req.path;
 
     if (protectedPaths.some(p => currentPath.startsWith(p)) && !user) {
         return res.redirect('/login');
+    }
+
+    // Allow unauthenticated access to /game/:id but render it through the layout
+    if (currentPath.startsWith('/game')) {
+        options.title = 'Game';
+        // Inform the game page whether sockets are enabled on the server
+        options.enableSockets = process.env.ENABLE_SOCKETS === 'true';
+        // Attempt to extract sessionId and playingColor from path or query
+        try {
+            const m = res.req.path.match(/\/game\/(\w+)/);
+            if (m) options.sessionId = m[1];
+            if (res.req.query && res.req.query.playingColor) options.playingColor = res.req.query.playingColor;
+            if (res.req.query && res.req.query.vs === 'computer') options.playingVsComputer = true;
+        } catch (e) {
+            // ignore
+        }
+
+        // Render the page into the layout so site-wide styles/navigation are preserved
+        const body = await ejs.renderFile(
+            path.join(__dirname, 'views/pages', 'game.ejs'),
+            options
+        );
+        return res.render('layout', { ...options, title: 'Game', body });
     }
 
     // Check DB connection if requried
@@ -172,7 +299,82 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-    logger.info(`Server is running on http://localhost:${PORT}`);
-});
+
+// Only start the server when this file is run directly. This allows tests
+// to require the Express `app` without the server automatically listening.
+if (require.main === module) {
+    const http = require('http');
+    const server = http.createServer(app);
+
+    // Log critical environment variables
+    logger.info(`Environment Variables Loaded: PORT=${process.env.PORT}, APP_SECRET=${process.env.APP_SECRET}, NODE_ENV=${process.env.NODE_ENV}`);
+
+    // Optionally enable Socket.io when configured
+    if (process.env.ENABLE_SOCKETS === 'true') {
+        try {
+            const { initSocket, getIo } = require('./utils/socket');
+            const io = initSocket(server);
+            const EventBus = require('./utils/eventBus');
+            EventBus.on('queue:joined', ({ userId, elo }) => {
+                // broadcast to matchmaking room
+                io.to('matchmaking').emit('queue:joined', { userId, elo });
+            });
+            EventBus.on('queue:left', ({ userId }) => {
+                io.to('matchmaking').emit('queue:left', { userId });
+            });
+            EventBus.on('queue:matched', ({ userId, opponentId }) => {
+                // Emit a private match event to both players if they're connected
+                io.to('matchmaking').emit('queue:matched', { userId, opponentId });
+            });
+
+            io.on('connection', (socket) => {
+                logger.info('Socket connected: ' + socket.id);
+                socket.on('disconnect', () => logger.info('Socket disconnected: ' + socket.id));
+            });
+            logger.info('Socket.io enabled');
+        } catch (e) {
+            logger.warn('socket.io not installed or failed to initialize: ' + e.message);
+        }
+    }
+
+    // Initialize services before starting the server
+    (async () => {
+        console.log('Before initializing GameSessionService');
+        try {
+            await initializeService();
+            console.log('GameSessionService initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize GameSessionService:', error);
+            process.exit(1); // Exit the process if initialization fails
+        }
+    })();
+
+    server.listen(PORT, async () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+        logger.info(`Server is running on http://localhost:${PORT}`);
+
+        // Optionally start matchmaker worker
+        if (process.env.ENABLE_MATCHMAKER === 'true') {
+            try {
+                const { start } = require('./workers/matchmakerWorker');
+                start();
+                logger.info('Matchmaker worker started');
+            } catch (e) {
+                logger.warn('Failed to start matchmaker worker: ' + e.message);
+            }
+        }
+
+        // Optionally start stockfish worker (for computer move processing)
+        if (process.env.ENABLE_STOCKFISH_WORKER === 'true') {
+            try {
+                const stockfishWorker = require('./workers/stockfishWorker');
+                stockfishWorker.start();
+                logger.info('Stockfish worker started');
+            } catch (e) {
+                logger.warn('Failed to start stockfish worker: ' + e.message);
+            }
+        }
+    });
+}
+
+module.exports = app;
