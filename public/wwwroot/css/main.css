@@ -82,3 +82,60 @@
         padding: 18px 6px;
     }
 }
+
+/* Game board sizing: keep board square, centered, and fit within viewport without scroll */
+#game-board {
+    width: min(90vw, 640px);
+    height: auto; /* height will be set to width via JS to ensure square */
+    margin: 0 auto 12px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 420px) {
+    #game-board { width: 98vw; }
+}
+
+/* Game layout: left info, center board, right chat */
+.game-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr 320px;
+    gap: 16px;
+    align-items: start;
+}
+.game-side {
+    background: transparent;
+}
+.info-side {
+    padding: 8px;
+}
+.chat-side {
+    padding: 8px;
+}
+.card {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    padding: 12px;
+}
+.card h4 { margin-top: 0; }
+.game-info .item { margin-bottom: 8px; }
+.chat-side .card { display:flex; flex-direction:column; height:520px; }
+.chat-side .card > h4 { margin:0 0 8px 0; }
+.chat-messages { flex:1; overflow-y: auto; padding: 6px; }
+.game-main {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+@media (max-width: 1000px) {
+    .game-layout { grid-template-columns: 180px 1fr 220px; }
+}
+@media (max-width: 760px) {
+    .game-layout { grid-template-columns: 1fr; }
+    .info-side, .chat-side { order: 2; }
+    .game-main { order: 1; }
+    #game-board { margin: 8px auto; }
+    .chat-side .card { height: 360px; }
+}

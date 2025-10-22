@@ -47,6 +47,7 @@ async function loginUser() {
 
 	if (result.success) {
 		showToast('Login successful!', 'success');
+		localStorage.setItem('jwtToken', result.token); // Store the JWT token
 		window.location.href = '/profile';
 	} else if (result.twoFA) {
 		showToast('Two-factor authentication required. Check your email.', 'info');
@@ -97,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	if (loginForm) {
 		loginForm.addEventListener('submit', function (e) {
 			e.preventDefault();
+			console.log('Login form submitted'); // Debugging log to confirm event handling
 			loginUser();
 		});
 	}
