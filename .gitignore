@@ -1,3 +1,9 @@
 /node_modules
 /.env
 /utils/logs
+coverage/
+/.idea
+.vscode
+logs/
+*.log
+.DS_Store\n# Ignore stockfish source files\nbin/stockfish/src/*\nbin/stockfish/wiki/*\n# Keep only runtime executables in bin\n!bin/stockfish.exe\n
