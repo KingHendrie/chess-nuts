@@ -1,3 +1,4 @@
+const eloService = require('./services/eloService');
 const express = require('express');
 const router = express.Router();
 const transporter = require('./mailer');
@@ -5,10 +6,65 @@ const logger = require('./logger');
 const { htmlToText } = require('html-to-text');
 const db = require('./db');
 const bcrypt = require('bcrypt');
+const matchmakingService = require('./services/matchmakingService');
+// gameSessionService may be exported either as { GameSessionService } or as the service object itself
+const _gameSessionModule = require('./services/gameSessionService');
+const GameSessionService = _gameSessionModule.GameSessionService || _gameSessionModule;
+// backward-compatible alias used by some routes
+const gameSessionService = GameSessionService;
+const computerJobQueue = require('./computerJobQueue');
+const jwt = require('jsonwebtoken');
 
 function generate2FACode() {
     const digits = () => Math.floor(100 + Math.random() * 900);
     return `${digits()}-${digits()}-${digits()}`;
+}
+
+// Auth middleware
+function requireAuth(req, res, next) {
+    if (!req.session.user) {
+        return res.status(401).json({ error: "Not authenticated." });
+    }
+    next();
+}
+
+// Middleware to verify JWT tokens
+function verifyToken(req, res, next) {
+    const token = req.headers['authorization']?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Access denied. No token provided.' });
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret');
+        req.user = decoded;
+        next();
+    } catch (err) {
+        res.status(401).json({ error: 'Invalid token.' });
+    }
+}
+
+// Middleware that accepts either a Bearer JWT or an existing session-based login.
+function verifyTokenOrSession(req, res, next) {
+    // If there's a session user, accept it
+    if (req.session && req.session.user) {
+        req.user = {
+            id: req.session.user.id,
+            email: req.session.user.email,
+            role: req.session.user.role
+        };
+        return next();
+    }
+
+    // Otherwise try the Authorization header
+    const token = req.headers['authorization']?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Access denied. No token or session provided.' });
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret');
+        req.user = decoded;
+        next();
+    } catch (err) {
+        res.status(401).json({ error: 'Invalid token.' });
+    }
 }
 
 // Enable JSON parsing for API routes
@@ -21,7 +77,7 @@ router.post('/email/send-email', async (req, res) => {
     const { to, subject, text, html } = req.body;
 
     if (!to || !subject || (!text && !html)) {
-        logger.warn('Email send attempt waith missing fields');
+        logger.warn('Email send attempt with missing fields');
         return res.status(400).json({ error: "Missing required fields!"});
     }
 
@@ -36,7 +92,7 @@ router.post('/email/send-email', async (req, res) => {
 
         logger.info(`Email sent to ${to} with subject "${subject}"`);
         res.json({ success: true });
-    } catch ( error) {
+    } catch (error) {
         logger.error('Error sending email: ' + error.stack);
         res.status(500).json({ error: 'Failed to send email.' });
     }
@@ -170,50 +226,26 @@ router.post('/user/login', async (req, res) => {
 
     if (!email || !password) {
         logger.warn('Login attempt with missing fields');
-        return res.status(400).json({ error: "Missing required fields!" });
+        return res.status(400).json({ error: 'Missing required fields!' });
     }
 
     try {
         const user = await db.checkUserCredentials(email, password);
         if (user) {
-            if (user.two_factor_enabled) {
-                const code = generate2FACode();
-                req.session.pending2FA = {
-                    userId: user.id,
-                    email: user.email,
-                    role: user.role,
-                    code,
-                    expires: Date.now() + 5 * 60 * 1000
-                };
-
-                await transporter.sendMail({
-                    from: process.env.EMAIL_USER,
-                    to: user.email,
-                    subject: "Your 2FA Code",
-                    text: `Your 2FA code: ${code}`,
-                    html: `<p>Your 2FA code: <b>${code}</b></p>`
-                });
-
-                logger.info(`2FA code sent to ${user.email}`);
-                return res.json({ twoFA: true, message: "Two-factor authentication required." });
-            } else {
-                req.session.user = {
-                    id: user.id,
-                    email: user.email,
-                    role: user.role,
-                    firstName: user.firstName,
-                    lastName: user.lastName
-                };
-                logger.info(`User ${email} logged in successfully`);
-                res.json({ success: true, message: "Login successful." });
-            }
+            const token = jwt.sign(
+                { id: user.id, email: user.email, role: user.role },
+                process.env.JWT_SECRET || 'default-secret',
+                { expiresIn: '1h' }
+            );
+            req.session.user = { id: user.id, email: user.email, role: user.role }; // Set session user
+            res.json({ success: true, token }); // Return the token in the response
         } else {
             logger.warn(`Login failed for user ${email}`);
-            res.status(401).json({ error: "Invalid email or password." });
+            res.status(401).json({ error: 'Invalid email or password.' });
         }
     } catch (error) {
         logger.error('Error during login: ' + error.stack);
-        res.status(500).json({ error: "Failed to process login." });
+        res.status(500).json({ error: 'Failed to process login.' });
     }
 });
 
@@ -418,5 +450,199 @@ router.put('/admin/users/:id', async (req, res) => {
 });
 
 //#endregion Admin Actions
+
+//#region Matchmaking and Game Sessions
+
+// Join matchmaking queue
+router.post('/matchmaking/join', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const result = await matchmakingService.joinQueue(userId);
+        res.json({ success: true, queue: result });
+    } catch (error) {
+        logger.error('Error joining matchmaking queue:', error);
+        res.status(500).json({ error: 'Failed to join matchmaking queue.' });
+    }
+});
+
+// Leave matchmaking queue
+router.post('/matchmaking/leave', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        await matchmakingService.leaveQueue(userId);
+        res.json({ success: true });
+    } catch (error) {
+        logger.error('Error leaving matchmaking queue:', error);
+        res.status(500).json({ error: 'Failed to leave matchmaking queue.' });
+    }
+});
+
+// Create a new game session between two users
+router.post('/game/session/create', verifyToken, async (req, res) => {
+    try {
+        const { opponentId, color, initialFen } = req.body;
+        const userId = req.user.id;
+
+        // Validate opponentId
+        const isComputerOpponent = opponentId === 'computer';
+        const validatedOpponentId = isComputerOpponent ? 0 : parseInt(opponentId, 10);
+
+        if (!validatedOpponentId && !isComputerOpponent) {
+            return res.status(400).json({ error: 'Invalid opponentId.' });
+        }
+
+        const playerWhiteId = color === 'white' ? userId : validatedOpponentId;
+        const playerBlackId = color === 'black' ? userId : validatedOpponentId;
+
+        // Input validation
+        if (!opponentId || !['white', 'black'].includes(color)) {
+            return res.status(400).json({ error: 'Invalid opponentId or color.' });
+        }
+
+        const session = await GameSessionService.createSession(playerWhiteId, playerBlackId, initialFen);
+        res.json({ success: true, session });
+    } catch (error) {
+        logger.error('Error creating game session: ' + error.stack);
+        res.status(500).json({ error: 'Failed to create game session.' });
+    }
+});
+
+// Make a move in a game session
+
+router.post('/game/session/:id/move', verifyTokenOrSession, async (req, res) => {
+    try {
+        const sessionId = req.params.id;
+        const moveObj = req.body.move;
+        const result = await gameSessionService.makeMove(sessionId, moveObj);
+        if (!result) {
+            return res.status(400).json({ error: 'Invalid move or session.' });
+        }
+
+        // If game is finished, update ELOs
+        if (result.status === 'finished') {
+            const session = await gameSessionService.getSession(sessionId);
+            // Determine winner/loser/draw
+            let winnerId = null, loserId = null, draw = false;
+            const chess = require('chess.js');
+            const game = new chess.Chess(session.fen);
+            if (game.isDraw()) {
+                draw = true;
+            } else if (game.isCheckmate()) {
+                // Winner is the player who just moved
+                winnerId = game.turn() === 'w' ? session.player_black_id : session.player_white_id;
+                loserId = game.turn() === 'w' ? session.player_white_id : session.player_black_id;
+            }
+            if (draw) {
+                await eloService.updateElo(session.player_white_id, session.player_black_id, 0.5);
+            } else if (winnerId && loserId) {
+                await eloService.updateElo(winnerId, loserId, 1);
+            }
+        }
+
+        res.json({ success: true, ...result });
+    } catch (error) {
+        logger.error('Error making move in game session:', error);
+        res.status(500).json({ error: 'Failed to make move.' });
+    }
+});
+
+// Export PGN for a session
+router.get('/game/session/:id/export/pgn', requireAuth, async (req, res) => {
+    try {
+        const session = await gameSessionService.getSession(req.params.id);
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+        const { Chess } = require('chess.js');
+        const game = new Chess(session.fen);
+        const pgn = game.pgn();
+        res.set('Content-Type', 'application/vnd.chess-pgn');
+        res.send(pgn);
+    } catch (e) {
+        logger.error('Failed to export PGN: ' + e.stack);
+        res.status(500).json({ error: 'Failed to export PGN' });
+    }
+});
+
+// Request computer to move for a session (enqueue job)
+router.post('/game/session/:id/computer-move', verifyTokenOrSession, async (req, res) => {
+    try {
+        const sessionId = req.params.id;
+        const { difficulty = 10 } = req.body;
+        logger.info(`Received computer-move request for session ${sessionId} (difficulty ${difficulty}) from user ${req.user?.id || 'anonymous'}`);
+        const enqueued = await computerJobQueue.enqueueComputerMove(sessionId, difficulty);
+        logger.info(`Enqueue result for session ${sessionId}: ${enqueued}`);
+        if (!enqueued) return res.status(500).json({ error: 'Failed to enqueue computer move' });
+        res.json({ success: true, enqueued: true });
+    } catch (e) {
+        logger.error('Failed to enqueue computer move: ' + e.stack);
+        res.status(500).json({ error: 'Failed to enqueue computer move' });
+    }
+});
+
+// Route for /play to enter matchmaking queue
+router.get('/play', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const queueEntry = await matchmakingService.joinQueue(userId);
+
+        // Poll for a match (simplified for now)
+        const interval = setInterval(async () => {
+            const match = await matchmakingService.findMatch(userId, queueEntry.elo);
+            if (match) {
+                clearInterval(interval);
+                await matchmakingService.setMatched(userId, match.user_id);
+
+                // Create a game session
+                const session = await gameSessionService.createSession(userId, match.user_id);
+                res.redirect(`/game:${session.id}`);
+            }
+        }, 2000); // Poll every 2 seconds
+    } catch (error) {
+        logger.error('Error in /play route:', error);
+        res.status(500).json({ error: 'Failed to enter matchmaking queue.' });
+    }
+});
+
+// Route for /game:gameid to load game session
+router.get('/game:gameid', verifyToken, async (req, res) => {
+    try {
+        const sessionId = req.params.gameid;
+        const session = await gameSessionService.getSession(sessionId);
+
+        if (!session) {
+            return res.status(404).json({ error: 'Game session not found.' });
+        }
+
+        res.json({
+            success: true,
+            session
+        });
+    } catch (error) {
+        logger.error('Error in /game:gameid route:', error);
+        res.status(500).json({ error: 'Failed to load game session.' });
+    }
+});
+
+// Route to render the game page
+router.get('/game/:id', async (req, res) => {
+    const gameId = req.params.id;
+
+    // Validate gameId
+    if (!gameId || isNaN(parseInt(gameId, 10))) {
+        return res.status(400).send('Invalid game ID');
+    }
+
+    try {
+        // Render the game page with the game ID
+        res.render('pages/game', { title: 'Game', gameId });
+    } catch (error) {
+        logger.error('Error rendering game page:', error);
+        res.status(500).send('Failed to load game page');
+    }
+});
+
+// Add a protected /game route
+router.get('/game', verifyToken, (req, res) => {
+    res.json({ success: true, message: 'Access granted to /game' });
+});
 
 module.exports = router;
