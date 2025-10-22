@@ -6,4 +6,10 @@ coverage/
 .vscode
 logs/
 *.log
-.DS_Store\n# Ignore stockfish source files\nbin/stockfish/src/*\nbin/stockfish/wiki/*\n# Keep only runtime executables in bin\n!bin/stockfish.exe\n
+.DS_Store
+# Ignore stockfish source files and wiki (allow runtime executables)
+bin/stockfish/
+bin/stockfish/src/
+bin/stockfish/wiki/
+!bin/stockfish/*.exe
+
