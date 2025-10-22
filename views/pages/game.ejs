@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game</title>
+    <script src="/wwwroot/js/jquery-3.6.0.min.js"></script> <!-- Use local jQuery -->
+    <script src="/wwwroot/js/chess.js"></script> <!-- Include chess.js locally -->
+    <script src="/wwwroot/js/chessboard-1.0.0.min.js"></script> <!-- Use local chessboard.js -->
+    <link rel="stylesheet" href="/wwwroot/css/chessboard-1.0.0.min.css"> <!-- Use local chessboard.css -->
+</head>
+<body>
+    <div class="game-container">
+        <h2>Chess Game</h2>
+        <div class="game-layout">
+            <aside class="game-side info-side">
+                <div class="card">
+                    <h4>Game Info</h4>
+                    <div class="game-info">
+                        <div class="item">Turn: <span id="game-turn">-</span></div>
+                        <div class="item">Status: <span id="game-status">-</span></div>
+                        <div class="item">Moves: <span id="game-moves">-</span></div>
+                        <div class="item">Timer: <span id="game-timer">00:00</span></div>
+                    </div>
+                    <div class="game-controls" style="margin-top:8px;">
+                        <button id="move-undo" class="btn btn-secondary">Undo</button>
+                        <button id="move-resign" class="btn btn-danger">Resign</button>
+                    </div>
+                </div>
+            </aside>
+
+            <main class="game-main">
+                <div id="game-board"></div>
+            </main>
+
+            <aside class="game-side chat-side">
+                <div class="card">
+                    <h4>Chat</h4>
+                    <div id="chat-messages" class="chat-messages"></div>
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                        <input type="text" id="chat-input" placeholder="Type a message..." style="flex:1;" />
+                        <button id="chat-send" class="btn btn-primary">Send</button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+    <script>
+    // Pass server-side flags into client
+    window.enableSockets = <%- JSON.stringify(enableSockets) %>;
+    // Fallback piece CDN base (chessboardjs v0.3.0 wikipedia images)
+    window.pieceCdnBase = 'https://raw.githubusercontent.com/oakmac/chessboardjs/v0.3.0/img/chesspieces/wikipedia/';
+    // Optional server-side injected values; renderWithLayout may pass these when known
+    window.playingColor = <%- JSON.stringify(typeof playingColor !== 'undefined' ? playingColor : 'white') %>;
+    window.sessionId = <%- JSON.stringify(typeof sessionId !== 'undefined' ? sessionId : '') %>;
+    window.playingVsComputer = <%- JSON.stringify(typeof playingVsComputer !== 'undefined' ? playingVsComputer : false) %>;
+    </script>
+    <script src="/wwwroot/js/game.js"></script>
+</body>
+</html>
