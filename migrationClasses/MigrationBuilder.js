@@ -16,7 +16,8 @@ class MigrationBuilder {
                 else if (col.type === 'text') table.text(col.name);
                 else if (col.type === 'longtext') table.text(col.name, 'longtext');
                 else if (col.type === 'boolean') table.boolean(col.name);
-                else if (col.type === 'timestamp') table.timestamps(true, true);
+                // Note: do NOT add timestamps inside the loop per column. We add a single
+                // pair of timestamps at the end to avoid duplicate `created_at`/`updated_at`.
                 else if (col.type === 'date') table.date(col.name);
                 else if (col.type === 'datetime') table.dateTime(col.name);
                 else if (col.type === 'enum') table.enu(col.name, col.values);
@@ -26,7 +27,8 @@ class MigrationBuilder {
                 }
             });
 
-            table.timestamps(true, true) // Default timestamps
+            // Add a single pair of timestamps for the table (created_at, updated_at)
+            table.timestamps(true, true);
         });
     }
 
