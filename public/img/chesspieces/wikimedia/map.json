@@ -1,0 +1,14 @@
+﻿{
+    "wR":  "Chess_rlt45.svg",
+    "bN":  "Chess_ndt45.svg",
+    "wN":  "Chess_nlt45.svg",
+    "bB":  "Chess_bdt45.svg",
+    "wB":  "Chess_blt45.svg",
+    "bP":  "Chess_pdt45.svg",
+    "wP":  "Chess_plt45.svg",
+    "bQ":  "Chess_gdt45.svg",
+    "wQ":  "Chess_qlt45.svg",
+    "wK":  "Chess_klt45.svg",
+    "bK":  "Chess_kdt45.svg",
+    "bR":  "Chess_rdt45.svg"
+}
