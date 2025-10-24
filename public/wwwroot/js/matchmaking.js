@@ -14,11 +14,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchElo() {
         // Get user profile to show ELO
-        const res = await fetch('/api/user/profile');
-        if (res.ok) {
+        try {
+            const res = await fetch('/api/user/profile');
+            if (!res.ok) return;
+            const ct = res.headers.get('content-type') || '';
+            if (!ct.includes('application/json')) return;
             const data = await res.json();
             userElo = data.elo || 500;
             eloValue.textContent = userElo;
+        } catch (e) {
+            console.warn('Failed to fetch user profile for ELO:', e);
         }
     }
 
@@ -35,8 +40,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 // If matched and current user is part of the match, navigate to game
                 const userId = window.currentUserId;
                 if (data.userId === userId || data.opponentId === userId) {
-                    // redirect to game page (server should create session beforehand)
-                    window.location.href = '/game';
+                    // If server provided a sessionId, redirect directly to that game
+                    if (data.sessionId) {
+                        window.location.href = `/game/${data.sessionId}`;
+                    } else {
+                        // fallback
+                        window.location.href = '/game';
+                    }
                 }
             });
         }

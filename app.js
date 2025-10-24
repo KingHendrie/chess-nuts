@@ -64,8 +64,10 @@ app.use(helmet({
             scriptSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://cdn.socket.io', "'unsafe-inline'"],
             imgSrc: ["'self'", 'data:', 'https://cdn.jsdelivr.net'],
             connectSrc: ["'self'", 'https://cdn.socket.io', `ws://localhost:${process.env.PORT || 3000}`, `http://localhost:${process.env.PORT || 3000}`],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            fontSrc: ["'self'", 'https://cdn.jsdelivr.net']
+            // Allow loading styles from Google Fonts when used by the client
+            styleSrc: ["'self'", 'https://fonts.googleapis.com', "'unsafe-inline'"],
+            // Allow font files from Google Fonts and CDNJS
+            fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net']
         }
     }
 }));
@@ -322,9 +324,15 @@ if (require.main === module) {
             EventBus.on('queue:left', ({ userId }) => {
                 io.to('matchmaking').emit('queue:left', { userId });
             });
-            EventBus.on('queue:matched', ({ userId, opponentId }) => {
-                // Emit a private match event to both players if they're connected
-                io.to('matchmaking').emit('queue:matched', { userId, opponentId });
+            EventBus.on('queue:matched', (payload) => {
+                try {
+                    const { userId: uid, opponentId: oid, sessionId } = payload || {};
+                    const payloadOut = { userId: uid, opponentId: oid };
+                    if (sessionId) payloadOut.sessionId = sessionId;
+                    io.to('matchmaking').emit('queue:matched', payloadOut);
+                } catch (e) {
+                    logger.warn('Error handling queue:matched in app.js: ' + (e && e.message));
+                }
             });
 
             io.on('connection', (socket) => {

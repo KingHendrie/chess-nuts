@@ -50,9 +50,21 @@ const MatchmakingService = {
     },
 
     async setMatched(userId, opponentId) {
+        // mark both users as matched
         await knex(TABLE).where({ user_id: userId }).update({ status: 'matched', updated_at: knex.fn.now() });
         await knex(TABLE).where({ user_id: opponentId }).update({ status: 'matched', updated_at: knex.fn.now() });
-        EventBus.emit('queue:matched', { userId, opponentId });
+
+        // create a game session for the matched users (white/black assignment: userId as white)
+        try {
+            const GameSessionService = require('./gameSessionService').GameSessionService;
+            const session = await GameSessionService.createSession(userId, opponentId);
+            EventBus.emit('queue:matched', { userId, opponentId, sessionId: session.id });
+            return session;
+        } catch (e) {
+            // fallback: emit matched event without session id
+            EventBus.emit('queue:matched', { userId, opponentId });
+            return null;
+        }
     },
 
     async getQueueStatus(userId) {
