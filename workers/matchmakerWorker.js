@@ -13,16 +13,13 @@ async function tick() {
         // Get current searching users ordered by created_at
         const rows = await knex('matchmaking_queue').where({ status: 'searching' }).orderBy('created_at', 'asc');
         for (let i = 0; i < rows.length; i++) {
-        const user = rows[i];
-        // Try to find a match for this user
-        const opponent = await matchmakingService.findMatch(user.user_id, user.elo, 0);
-        if (opponent) {
-            // Create game session
-            const session = await gameSessionService.createSession(user.user_id, opponent.user_id);
-            // Mark matched in queue
-            await matchmakingService.setMatched(user.user_id, opponent.user_id);
-            EventBus.emit('queue:matched', { userId: user.user_id, opponentId: opponent.user_id });
-        }
+            const user = rows[i];
+            // Try to find a match for this user
+            const opponent = await matchmakingService.findMatch(user.user_id, user.elo, 0);
+            if (opponent) {
+                // Mark matched in queue and let matchmakingService create the session and emit the event
+                await matchmakingService.setMatched(user.user_id, opponent.user_id);
+            }
         }
     } catch (e) {
         console.error('Matchmaker error', e);
