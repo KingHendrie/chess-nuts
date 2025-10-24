@@ -13,6 +13,7 @@ const GameSessionService = _gameSessionModule.GameSessionService || _gameSession
 // backward-compatible alias used by some routes
 const gameSessionService = GameSessionService;
 const computerJobQueue = require('./computerJobQueue');
+const { getIo } = require('./socket');
 const jwt = require('jsonwebtoken');
 
 function generate2FACode() {
@@ -477,6 +478,26 @@ router.post('/matchmaking/leave', verifyToken, async (req, res) => {
     }
 });
 
+// Find a potential match for the current user (returns JSON)
+router.get('/matchmaking/find', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const queueEntry = await matchmakingService.getQueueStatus(userId);
+        if (!queueEntry) return res.json({ success: true, matchFound: false, reason: 'not_in_queue' });
+
+        const created = new Date(queueEntry.created_at || Date.now());
+        const waitTime = Math.floor((Date.now() - created.getTime()) / 1000);
+        const match = await matchmakingService.findMatch(userId, queueEntry.elo || 500, waitTime);
+        if (match) {
+            return res.json({ success: true, matchFound: true, match });
+        }
+        return res.json({ success: true, matchFound: false });
+    } catch (error) {
+        logger.error('Error finding matchmaking match:', error);
+        res.status(500).json({ error: 'Failed to find match.' });
+    }
+});
+
 // Create a new game session between two users
 router.post('/game/session/create', verifyToken, async (req, res) => {
     try {
@@ -537,6 +558,19 @@ router.post('/game/session/:id/move', verifyTokenOrSession, async (req, res) => 
             } else if (winnerId && loserId) {
                 await eloService.updateElo(winnerId, loserId, 1);
             }
+        }
+
+        // Broadcast move to connected clients in the session room (if sockets are enabled)
+        try {
+            const io = getIo();
+            if (io) {
+                const room = `game_${req.params.id}`;
+                io.to(room).emit('move', result.move);
+                // Optionally emit full session fen for sync
+                io.to(room).emit('fen', { fen: result.fen });
+            }
+        } catch (e) {
+            logger.warn('Failed to broadcast move via socket: ' + (e && e.message));
         }
 
         res.json({ success: true, ...result });
