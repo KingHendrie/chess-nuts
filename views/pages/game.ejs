@@ -55,6 +55,9 @@
     window.sessionId = <%- JSON.stringify(typeof sessionId !== 'undefined' ? sessionId : '') %>;
     window.playingVsComputer = <%- JSON.stringify(typeof playingVsComputer !== 'undefined' ? playingVsComputer : false) %>;
     </script>
+    <% if (enableSockets) { %>
+        <script src="/socket.io/socket.io.js"></script>
+    <% } %>
     <script src="/wwwroot/js/game.js"></script>
 </body>
 </html>

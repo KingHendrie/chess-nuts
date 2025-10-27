@@ -25,6 +25,31 @@ function initSocket(server) {
         socket.on('leaveMatchmaking', () => {
             socket.leave('matchmaking');
         });
+        // Allow clients to join a game-specific room so we can emit moves for that session only
+        socket.on('joinGame', (payload) => {
+            try {
+                const sessionId = payload && (payload.sessionId || payload.id) ? (payload.sessionId || payload.id) : payload;
+                if (sessionId) {
+                    const room = `game_${sessionId}`;
+                    socket.join(room);
+                    console.log(`Socket ${socket.id} joined room ${room}`);
+                }
+            } catch (e) {
+                console.warn('joinGame handler error:', e && e.message);
+            }
+        });
+        socket.on('leaveGame', (payload) => {
+            try {
+                const sessionId = payload && (payload.sessionId || payload.id) ? (payload.sessionId || payload.id) : payload;
+                if (sessionId) {
+                    const room = `game_${sessionId}`;
+                    socket.leave(room);
+                    console.log(`Socket ${socket.id} left room ${room}`);
+                }
+            } catch (e) {
+                console.warn('leaveGame handler error:', e && e.message);
+            }
+        });
     });
     // Add logging to confirm socket.io.js requests
     io.engine.on('initial_headers', (headers, req) => {

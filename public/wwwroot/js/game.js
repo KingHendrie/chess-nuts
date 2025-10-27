@@ -47,22 +47,38 @@ function sendMove(moveObj) {
     })
     .then(async res => {
         if (res.status === 401) {
-            // authentication/token missing
             alert('Authentication required to make moves. Please sign in.');
             throw new Error('Unauthorized');
         }
-        const data = await res.json();
-        if (res.ok && data.success) {
-            // server accepted move; nothing more to do because we already updated locally
+
+        // Guard: only call res.json() when content-type is JSON to avoid parse errors
+        const ct = res.headers.get('content-type') || '';
+        let data = null;
+        if (ct.includes('application/json')) {
+            try {
+                data = await res.json();
+            } catch (e) {
+                console.warn('Failed to parse JSON response for move:', e);
+            }
+        } else {
+            // If server responded with text/html or empty body, capture text for debugging
+            try {
+                const txt = await res.text();
+                console.warn('Non-JSON response from move endpoint:', txt && txt.slice ? txt.slice(0, 200) : txt);
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        if (res.ok && data && data.success) {
             return data;
         } else {
-            throw new Error(data.error || 'Invalid move');
+            throw new Error((data && data.error) || 'Invalid move');
         }
     })
     .catch(err => {
         console.error('Move failed:', err);
         alert(err.message || 'Move failed');
-        // Optionally reload position from server or revert last move — left as future improvement
     });
 }
 
@@ -207,12 +223,36 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.enableSockets && typeof io !== 'undefined') {
         socket = io();
 
+        // Join the session-specific room so we only receive events for this game
+        socket.on('connect', () => {
+            try {
+                if (sessionId) socket.emit('joinGame', { sessionId });
+            } catch (e) { console.warn('joinGame emit failed', e); }
+        });
+
         // Listen for opponent moves
         socket.on('move', (move) => {
-            game.move(move);
-            moveHistory.push(move);
-            updateBoard();
-            if (game.game_over()) stopTimer();
+            try {
+                game.move(move);
+                moveHistory.push(move);
+                updateBoard();
+                if (game.game_over()) stopTimer();
+            } catch (e) {
+                console.warn('Error applying move from socket:', e);
+            }
+        });
+
+        // Listen for a full-FEN sync (in case of desync)
+        socket.on('fen', (data) => {
+            try {
+                if (data && data.fen) {
+                    game.load(data.fen);
+                    board.position(data.fen);
+                    updateGameInfo();
+                }
+            } catch (e) {
+                console.warn('Error handling fen sync:', e);
+            }
         });
 
         // Listen for game start

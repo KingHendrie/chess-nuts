@@ -489,6 +489,22 @@ router.get('/matchmaking/find', verifyToken, async (req, res) => {
         const waitTime = Math.floor((Date.now() - created.getTime()) / 1000);
         const match = await matchmakingService.findMatch(userId, queueEntry.elo || 500, waitTime);
         if (match) {
+            // Try to find an already-created session between the two users (setMatched may have created it)
+            try {
+                const { knex } = require('./db');
+                const sessionRow = await knex('game_sessions')
+                    .where(function() {
+                        this.where({ player_white_id: userId, player_black_id: match.user_id })
+                            .orWhere({ player_white_id: match.user_id, player_black_id: userId });
+                    })
+                    .andWhere({ status: 'active' })
+                    .first();
+                if (sessionRow) {
+                    return res.json({ success: true, matchFound: true, match, sessionId: sessionRow.id });
+                }
+            } catch (e) {
+                // ignore DB lookup errors and return match info
+            }
             return res.json({ success: true, matchFound: true, match });
         }
         return res.json({ success: true, matchFound: false });
